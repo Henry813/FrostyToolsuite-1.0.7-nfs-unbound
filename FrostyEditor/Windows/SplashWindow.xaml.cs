@@ -20,10 +20,46 @@ namespace FrostyEditor.Windows
     /// </summary>
     public partial class SplashWindow : Window
     {
+        private class SplashWindowLogger : ILogger
+        {
+            private SplashWindow parent;
+            public SplashWindowLogger(SplashWindow inParent)
+            {
+                parent = inParent;
+            }
+
+            public void Log(string text, params object[] vars)
+            {
+                string fullText = string.Format(text, vars);
+                parent.logTextBox.Dispatcher.Invoke(() =>
+                {
+                    if (fullText.StartsWith("progress:"))
+                    {
+                        fullText = fullText.Replace("progress:", "");
+                        double progress = double.Parse(fullText);
+
+                        parent.progressBar.Value = progress;
+                        parent.TaskbarItemInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.Normal;
+                        parent.TaskbarItemInfo.ProgressValue = progress / 100.0d;
+                    }
+                    else
+                        parent.logTextBox.Text = fullText;
+                });
+            }
+
+            public void LogError(string text, params object[] vars)
+            {
+            }
+
+            public void LogWarning(string text, params object[] vars)
+            {
+            }
+        }
+
         public SplashWindow()
         {
             InitializeComponent();
-            versionTextBlock.Text = App.Version;
+            //versionTextBlock.Text = App.Version;
             TaskbarItemInfo = new System.Windows.Shell.TaskbarItemInfo();
         }
 
@@ -72,9 +108,8 @@ namespace FrostyEditor.Windows
             }
 
             Config.Save();
-            //Config.Save(App.configFilename);
 
-            App.Logger.Log("Loading Profile For " + ProfilesLibrary.DisplayName);
+            App.Logger.Log("Loading profile for " + ProfilesLibrary.DisplayName);
 
             profileTextBlock.Text = ProfilesLibrary.DisplayName;
             bannerImage.Source = LoadBanner(ProfilesLibrary.Banner);
@@ -128,6 +163,7 @@ namespace FrostyEditor.Windows
             win.Show();
 
             App.Logger.Log("Initialization complete");
+            App.NotificationManager.Show("Initialization complete");
 
             Close();
 
@@ -162,9 +198,8 @@ namespace FrostyEditor.Windows
             await Task.Run(() =>
             {
                 string basePath = Config.Get<string>("GamePath", null, ConfigScope.Game);
-                //string basePath = Config.Get<string>("Init", "GamePath", "");
 
-                App.FileSystem = new FileSystem(basePath);
+                App.FileSystem = new FileSystemManager(basePath);
                 foreach (FileSystemSource source in ProfilesLibrary.Sources)
                     App.FileSystem.AddSource(source.Path, source.SubDirs);
                 App.FileSystem.Initialize(key);
@@ -191,7 +226,7 @@ namespace FrostyEditor.Windows
 
         private async Task<int> LoadLocalizedStringResourceTables(ILogger logger)
         {
-            logger.Log("Loading Localized Strings");
+            logger.Log("Loading localized strings");
             await Task.Run(() => 
             {
                 var localizedStringDb = App.PluginManager.GetLocalizedStringDatabase();
@@ -202,8 +237,8 @@ namespace FrostyEditor.Windows
 
         private async Task<int> LoadStringList(ILogger logger)
         {
-            logger.Log("Loading Custom Strings");
-            await Task.Run(() => Utils.LoadStringList("strings.txt", logger));
+            logger.Log("Loading custom strings");
+            await Task.Run(() => Utils.GetString(0));
             return 0;
         }       
 

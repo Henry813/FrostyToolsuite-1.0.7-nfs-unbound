@@ -43,7 +43,7 @@ namespace FrostyModManager
                 return;
             }
 
-            ProfileName = profileNameTextBox.Text.Trim();
+            ProfileName = profileNameTextBox.Text;
             DialogResult = true;
             Close();
         }

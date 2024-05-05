@@ -1,13 +1,13 @@
 ﻿using Frosty.Core.Attributes;
 using Frosty.Core.Controls;
 using FrostySdk;
-using FrostySdk.Ebx;
 using FrostySdk.Interfaces;
 using FrostySdk.IO;
 using FrostySdk.Managers;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Media;
+using FrostySdk.Managers.Entries;
 
 namespace Frosty.Core
 {
@@ -97,8 +97,8 @@ namespace Frosty.Core
         /// <param name="exportTypes">A list of <see cref="AssetExportType"/> to be populated.</param>
         public virtual void GetSupportedExportTypes(List<AssetExportType> exportTypes)
         {
-            exportTypes.Add(new AssetExportType("bin", "Binary File"));
             exportTypes.Add(new AssetExportType("xml", "XML File"));
+            exportTypes.Add(new AssetExportType("bin", "Binary File"));
         }
 
         /// <summary>
@@ -107,7 +107,6 @@ namespace Frosty.Core
         /// <param name="importTypes">A list of <see cref="AssetImportType"/> to be populated.</param>
         public virtual void GetSupportedImportTypes(List<AssetImportType> importTypes)
         {
-            importTypes.Add(new AssetImportType("bin", "Binary File (Data Only)"));
             importTypes.Add(new AssetImportType("bin", "Binary File"));
         }
 
@@ -171,13 +170,13 @@ namespace Frosty.Core
         /// </summary>
         /// <param name="entry">The <see cref="AssetEntry"/> to import the data to.</param>
         /// <param name="path">A string representing the path and filename to import from.</param>
-        /// <param name="filterType">The chosen <see cref="AssetImportType"/> to import as.</param>
+        /// <param name="filterType">A string representing the chosen filter type to import as.</param>
         /// <returns>True if import was successful, False otherwise.</returns>
-        public virtual bool Import(EbxAssetEntry entry, string path, AssetImportType filterType)
+        public virtual bool Import(EbxAssetEntry entry, string path, string filterType)
         {
-            if (filterType.Extension == "bin")
+            if (filterType == "bin")
             {
-                ImportFromBin(entry, path, filterType.Description.Contains("Data Only"));
+                ImportFromBin(entry, path);
                 return true;
             }
             return false;
@@ -196,13 +195,19 @@ namespace Frosty.Core
         {
             if (App.PluginManager.GetCustomHandler(entry.Type) != null)
             {
-                App.Logger.LogError("Cannot Export asset with handler to .bin");
+                // @todo: throw some kind of error
                 return;
             }
 
-            if (ProfilesLibrary.EnableExecution)
+            if (ProfilesLibrary.EnableExecution && entry.HasModifiedData)
             {
-                using (EbxBaseWriter writer = EbxBaseWriter.CreateWriter(new MemoryStream()))
+                EbxWriteFlags flags = EbxWriteFlags.None;
+                if (ProfilesLibrary.EbxVersion == 6)
+                {
+                    flags |= EbxWriteFlags.DoNotSort;
+                }
+
+                using (EbxBaseWriter writer = EbxBaseWriter.CreateWriter(new MemoryStream(), flags))
                 {
                     writer.WriteAsset(App.AssetManager.GetEbx(entry));
                     using (NativeWriter fileWriter = new NativeWriter(new FileStream(path, FileMode.Create, FileAccess.Write)))
@@ -218,29 +223,18 @@ namespace Frosty.Core
         }
 
         // imports the asset from a raw ebx bin
-        private void ImportFromBin(EbxAssetEntry entry, string path, bool dataOnly = true)
+        private void ImportFromBin(EbxAssetEntry entry, string path)
         {
             if (App.PluginManager.GetCustomHandler(entry.Type) != null)
             {
-                App.Logger.LogError("Cannot Import .bin into asset with handler");
+                // @todo: throw some kind of error
                 return;
             }
 
-            using (EbxReader reader = EbxReader.CreateReader(new FileStream(path, FileMode.Open, FileAccess.Read), App.FileSystem, true))
+            using (EbxReader reader = EbxReader.CreateReader(new FileStream(path, FileMode.Open, FileAccess.Read), App.FileSystemManager, true))
             {
-                EbxAsset newAsset = reader.ReadAsset<EbxAsset>();
-
-                if (dataOnly)
-                {
-                    // use guids from original asset
-                    EbxAsset origAsset = App.AssetManager.GetEbx(entry);
-                    dynamic rootObj = newAsset.RootObject;
-
-                    newAsset.SetFileGuid(origAsset.FileGuid);
-                    rootObj.SetInstanceGuid(new AssetClassGuid(origAsset.RootInstanceGuid, -1));
-                }
-
-                App.AssetManager.ModifyEbx(entry.Name, newAsset);
+                var asset = reader.ReadAsset<EbxAsset>();
+                App.AssetManager.ModifyEbx(entry.Name, asset);
             }
         }
     }

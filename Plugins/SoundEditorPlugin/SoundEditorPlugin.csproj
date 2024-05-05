@@ -37,7 +37,7 @@
   </PropertyGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /Y $(TargetPath) $(SolutionDir)$(OutDir)Plugins\" />
+    <Exec Command="xcopy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)$(OutDir)Plugins\&quot;" />
   </Target>
   
   <ItemGroup>
@@ -67,6 +67,7 @@
     <ProjectReference Include="..\..\FrostyControls\FrostyControls.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\FrostyHash\FrostyHash.vcxproj" />
     <ProjectReference Include="..\..\FrostyPlugin\FrostyCore.csproj">
       <Private>false</Private>
     </ProjectReference>

@@ -20,10 +20,46 @@ namespace FrostyModManager.Windows
     /// </summary>
     public partial class SplashWindow : Window
     {
+        private class SplashWindowLogger : ILogger
+        {
+            private SplashWindow parent;
+            public SplashWindowLogger(SplashWindow inParent)
+            {
+                parent = inParent;
+            }
+
+            public void Log(string text, params object[] vars)
+            {
+                string fullText = string.Format(text, vars);
+                parent.logTextBox.Dispatcher.Invoke(() =>
+                {
+                    if (fullText.StartsWith("progress:"))
+                    {
+                        fullText = fullText.Replace("progress:", "");
+                        double progress = double.Parse(fullText);
+
+                        parent.progressBar.Value = progress;
+                        parent.TaskbarItemInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.Normal;
+                        parent.TaskbarItemInfo.ProgressValue = progress / 100.0d;
+                    }
+                    else
+                        parent.logTextBox.Text = fullText;
+                });
+            }
+
+            public void LogError(string text, params object[] vars)
+            {
+            }
+
+            public void LogWarning(string text, params object[] vars)
+            {
+            }
+        }
+
         public SplashWindow()
         {
             InitializeComponent();
-            versionTextBlock.Text = App.Version;
+            //versionTextBlock.Text = App.Version;
             TaskbarItemInfo = new System.Windows.Shell.TaskbarItemInfo();
         }
 
@@ -72,7 +108,6 @@ namespace FrostyModManager.Windows
             }
 
             Config.Save();
-            //Config.Save(App.configFilename);
 
             profileTextBlock.Text = ProfilesLibrary.DisplayName;
             bannerImage.Source = LoadBanner(ProfilesLibrary.Banner);
@@ -96,21 +131,20 @@ namespace FrostyModManager.Windows
 
             // load filesystem to gather details on game version
             string basePath = Config.Get<string>("GamePath", "", ConfigScope.Game);
-            //string basePath = Config.Get<string>("Init", "GamePath", "");
-            Frosty.Core.App.FileSystem = new FileSystem(basePath);
+            Frosty.Core.App.FileSystemManager = new FileSystemManager(basePath);
             foreach (FileSystemSource source in ProfilesLibrary.Sources)
-                Frosty.Core.App.FileSystem.AddSource(source.Path, source.SubDirs);
-            Frosty.Core.App.FileSystem.Initialize(KeyManager.Instance.GetKey("Key1"));
+                Frosty.Core.App.FileSystemManager.AddSource(source.Path, source.SubDirs);
+            Frosty.Core.App.FileSystemManager.Initialize(KeyManager.Instance.GetKey("Key1"));
 
             // check to make sure SDK is up to date
-            if (!File.Exists(Frosty.Core.App.FileSystem.CacheName + ".cache"))
+            if (!File.Exists(Frosty.Core.App.FileSystemManager.CacheName + ".cache"))
             {
                 ILogger logger = new SplashWindowLogger(this);
 
                 // load data from game or cache
                 await LoadData(logger);
 
-                if (TypeLibrary.GetSdkVersion() != Frosty.Core.App.FileSystem.Head)
+                if (TypeLibrary.GetSdkVersion() != Frosty.Core.App.FileSystemManager.Head)
                 {
                     // requires updating
                     SdkUpdateWindow sdkWin = new SdkUpdateWindow(this);
@@ -121,7 +155,7 @@ namespace FrostyModManager.Windows
             // clear out all global managers
             Frosty.Core.App.AssetManager = null;
             Frosty.Core.App.ResourceManager = null;
-            Frosty.Core.App.FileSystem = null;
+            Frosty.Core.App.FileSystemManager = null;
             GC.Collect();
 
             // show the main editor window
@@ -157,11 +191,11 @@ namespace FrostyModManager.Windows
                 // need to load the managers into the global core app class as the SDK updater
                 // requires them to be valid
 
-                Frosty.Core.App.ResourceManager = new ResourceManager(Frosty.Core.App.FileSystem);
+                Frosty.Core.App.ResourceManager = new ResourceManager(Frosty.Core.App.FileSystemManager);
                 Frosty.Core.App.ResourceManager.SetLogger(logger);
                 Frosty.Core.App.ResourceManager.Initialize();
 
-                Frosty.Core.App.AssetManager = new AssetManager(Frosty.Core.App.FileSystem, Frosty.Core.App.ResourceManager);
+                Frosty.Core.App.AssetManager = new AssetManager(Frosty.Core.App.FileSystemManager, Frosty.Core.App.ResourceManager);
                 if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa17 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa18 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden20 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa20 || ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville)
                     Frosty.Core.App.AssetManager.RegisterCustomAssetManager("legacy", typeof(LegacyFileManager));
                 Frosty.Core.App.AssetManager.SetLogger(logger);

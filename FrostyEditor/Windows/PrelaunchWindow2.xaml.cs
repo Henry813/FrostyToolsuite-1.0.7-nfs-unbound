@@ -35,8 +35,8 @@ namespace FrostyEditor.Windows
                 return;
             }
 
-            App.InitDiscordRPC();
-            App.UpdateDiscordRPC("Initializing");
+            App.InitDiscordRpc();
+            App.UpdateDiscordRpc("Initializing");
 
             // launch splash
             SplashWindow splash = new SplashWindow();
@@ -157,9 +157,9 @@ namespace FrostyEditor.Windows
                 {
                     IterateSubKeys(subKey.OpenSubKey(subKeyName), ref totalCount);
                 }
-                catch (System.Exception)
+                catch (System.Security.SecurityException)
                 {
-                    continue;
+                    // do nothing
                 }
             }
 
@@ -198,7 +198,7 @@ namespace FrostyEditor.Windows
 
         private void RemoveConfigButton_Click(object sender, RoutedEventArgs e)
         {
-            if (FrostyMessageBox.Show("Are you sure you want to delete this configuration?", "Frosty Editor", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (FrostyMessageBox.Show("Are you sure you want to delete this configuration?", "Frosty Mod Manager", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 FrostyConfiguration selectedItem = ConfigList.SelectedItem as FrostyConfiguration;
 

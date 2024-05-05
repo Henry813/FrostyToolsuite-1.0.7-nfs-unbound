@@ -9,6 +9,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using FrostySdk.Managers.Entries;
 
 namespace Frosty.Core.Controls
 {
@@ -19,13 +20,16 @@ namespace Frosty.Core.Controls
         public ImageSource Icon { get; private set; }
         public RelayCommand Command { get; private set; }
 
-        public ToolbarItem(string text, string tooltip, string icon, RelayCommand inCommand)
+        public bool IsAddedByPlugin { get; private set; }
+        
+        public ToolbarItem(string text, string tooltip, string icon, RelayCommand inCommand, bool isAddedByPlugin = false)
         {
             Text = text;
             ToolTip = tooltip;
             if (!string.IsNullOrEmpty(icon))
                 Icon = new ImageSourceConverter().ConvertFromString("pack://application:,,,/FrostyEditor;component/" + icon) as ImageSource;
             Command = inCommand;
+            IsAddedByPlugin = isAddedByPlugin;
         }
     }
 
@@ -189,7 +193,9 @@ namespace Frosty.Core.Controls
         private void ViewInstances_Click(object state)
         {
             if (!(GetTemplateChild("PART_AssetPropertyGrid") is FrostyPropertyGrid pg))
+            {
                 return;
+            }
 
             AssetInstancesWindow win = new AssetInstancesWindow(asset.RootObjects, pg.SelectedClass, Asset, (EbxAssetEntry)AssetEntry);
             bool result = win.ShowDialog() == true;

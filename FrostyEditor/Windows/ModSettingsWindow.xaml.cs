@@ -4,8 +4,6 @@ using System.IO;
 using Frosty.Core;
 using Frosty.Core.Mod;
 using System.Collections.Generic;
-using System;
-using System.Linq;
 
 namespace FrostyEditor.Windows
 {
@@ -78,21 +76,12 @@ namespace FrostyEditor.Windows
                 return;
             }
 
-            string[] approvedDomains = { "nexusmods.com", "moddb.com" };
-
-            if (modPageLinkTextBox.Text != "" && (!Uri.IsWellFormedUriString(modPageLinkTextBox.Text, UriKind.RelativeOrAbsolute) || !approvedDomains.Any(modPageLinkTextBox.Text.Contains)))
-            {
-                FrostyMessageBox.Show("Link needs to be valid", "Frosty Editor");
-                return;
-            }
-
             ModSettings.Title = modTitleTextBox.Text;
             ModSettings.Author = modAuthorTextBox.Text;
             ModSettings.Category = modCategoryTextBox.Text;
             ModSettings.SelectedCategory = modCategoryComboBox.SelectedIndex;
             ModSettings.Version = modVersionTextBox.Text;
             ModSettings.Description = modDescriptionTextBox.Text;
-            ModSettings.Link = modPageLinkTextBox.Text;
             ModSettings.Icon = iconImageButton.GetImage();
             ModSettings.SetScreenshot(0, ssImageButton1.GetImage());
             ModSettings.SetScreenshot(1, ssImageButton2.GetImage());

@@ -20,7 +20,6 @@ namespace FrostyModManager
         public void Refresh()
         {
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -37,7 +36,6 @@ namespace FrostyModManager
                 AppliedMods.Add(new FrostyAppliedMod(backupFileName, isEnabled));
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -45,7 +43,6 @@ namespace FrostyModManager
         {
             AppliedMods.Remove(mod);
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -60,7 +57,6 @@ namespace FrostyModManager
             AppliedMods.Insert(--index, mod);
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -73,7 +69,6 @@ namespace FrostyModManager
             AppliedMods.Insert(index, mod);
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -88,7 +83,6 @@ namespace FrostyModManager
             AppliedMods.Insert(++index, mod);
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -104,7 +98,6 @@ namespace FrostyModManager
             AppliedMods.Insert(index, mod);
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -130,7 +123,6 @@ namespace FrostyModManager
             }
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -156,7 +148,6 @@ namespace FrostyModManager
             }
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -182,7 +173,6 @@ namespace FrostyModManager
             }
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 
@@ -208,7 +198,6 @@ namespace FrostyModManager
             }
 
             Config.Add(Name, ToConfigString(), ConfigScope.Pack);
-            //Config.Add("Profiles", Name, ToConfigString());
             AppliedModsUpdated?.Invoke(this, new RoutedEventArgs());
         }
 

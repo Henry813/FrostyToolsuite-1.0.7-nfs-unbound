@@ -2,7 +2,7 @@
 using FrostySdk.Ebx;
 using FrostySdk.Interfaces;
 using FrostySdk.IO;
-using FrostySdk.Managers;
+using FrostySdk.Managers.Entries;
 using FrostySdk.Resources;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
-using System.Text.RegularExpressions;
+using System.Text;
 
 namespace FrostySdk
 {
@@ -357,30 +357,43 @@ namespace FrostySdk
         public static int MaxStreams
         {
             get
-            {
+             {
                 switch (ProfilesLibrary.DataVersion)
                 {
-                    case (int)ProfileVersion.NeedForSpeedRivals: return 4;
-                    case (int)ProfileVersion.PlantsVsZombiesGardenWarfare: return 4;
-                    case (int)ProfileVersion.DragonAgeInquisition: return 4;
-                    case (int)ProfileVersion.Battlefield4: return 4;
-                    case (int)ProfileVersion.PlantsVsZombiesGardenWarfare2: return 4;
-                    case (int)ProfileVersion.NeedForSpeed: return 4;
-                    case (int)ProfileVersion.NeedForSpeedEdge: return 4;
-                    case (int)ProfileVersion.StarWarsBattlefront: return 6;
-                    case (int)ProfileVersion.Battlefield5: return 8;
-                    case (int)ProfileVersion.StarWarsBattlefrontII: return 16;
-                    case (int)ProfileVersion.Fifa18: return 16;
-                    case (int)ProfileVersion.Madden19: return 16;
-                    case (int)ProfileVersion.NeedForSpeedPayback: return 16;
-                    case (int)ProfileVersion.Fifa19: return 16;
-                    case (int)ProfileVersion.Anthem: return 16;
-                    case (int)ProfileVersion.Madden20: return 16;
-                    case (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville: return 16;
-                    case (int)ProfileVersion.NeedForSpeedHeat: return 16;
-                    case (int)ProfileVersion.Fifa20: return 16;
-                    case (int)ProfileVersion.StarWarsSquadrons: return 16;
-                    default: return 8;
+                    case (int)ProfileVersion.NeedForSpeedRivals:
+                    case (int)ProfileVersion.PlantsVsZombiesGardenWarfare:
+                    case (int)ProfileVersion.DragonAgeInquisition:
+                    case (int)ProfileVersion.Battlefield4:
+                    case (int)ProfileVersion.PlantsVsZombiesGardenWarfare2:
+                    case (int)ProfileVersion.NeedForSpeed:
+                    case (int)ProfileVersion.NeedForSpeedEdge:
+                        return 4;
+                    case (int)ProfileVersion.StarWarsBattlefront:
+                        return 6;
+                    case (int)ProfileVersion.Battlefield5:
+                        return 8;
+                    case (int)ProfileVersion.StarWarsBattlefrontII:
+                    case (int)ProfileVersion.Fifa18:
+                    case (int)ProfileVersion.Madden19:
+                    case (int)ProfileVersion.NeedForSpeedPayback:
+                    case (int)ProfileVersion.Fifa19:
+                    case (int)ProfileVersion.Anthem:
+                    case (int)ProfileVersion.Madden20:
+                    case (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville:
+                    case (int)ProfileVersion.NeedForSpeedHeat:
+                    case (int)ProfileVersion.Fifa20:
+                    case (int)ProfileVersion.StarWarsSquadrons:
+                    case (int)ProfileVersion.Fifa21:
+                    case (int)ProfileVersion.Madden22:
+                    case (int)ProfileVersion.Fifa22:
+                    case (int)ProfileVersion.Battlefield2042:
+                    case (int)ProfileVersion.Madden23:
+                    case (int)ProfileVersion.Fifa23:
+                    case (int)ProfileVersion.NeedForSpeedUnbound:
+                    case (int)ProfileVersion.DeadSpace:
+                        return 16;
+                    default:
+                        return 8;
                 }
             }
         }
@@ -394,7 +407,7 @@ namespace FrostySdk
 
         public static GeometryDeclarationDesc Create(Element[] elements)
         {
-            GeometryDeclarationDesc geomDecl = new GeometryDeclarationDesc {Elements = new Element[MaxElements]};
+            GeometryDeclarationDesc geomDecl = new GeometryDeclarationDesc { Elements = new Element[MaxElements] };
 
             int offset = 0;
             for (int i = 0; i < MaxElements; i++)
@@ -462,13 +475,74 @@ namespace FrostySdk
 
     internal static class Oodle
     {
-        public delegate int DecompressFunc(IntPtr srcBuffer, long srcSize, IntPtr dstBuffer, long dstSize, int a5 = 0, int a6 = 0, long a7 = 0, long a8 = 0, long a9 = 0, long a10 = 0, long a11 = 0, long a12 = 0, long a13 = 0, int a14 = 3);
+        internal enum OodleFormat : uint
+        {
+            LZH = 0,
+            LZHLW = 1,
+            LZNIB = 2,
+            None = 3,
+            LZB16 = 4,
+            LZBLW = 5,
+            LZA = 6,
+            LZNA = 7,
+            Kraken = 8,
+            Mermaid = 9,
+            BitKnit = 10,
+            Selkie = 11,
+            Hydra = 12,
+            Leviathan = 13
+        }
+
+        internal enum OodleCompressionLevel : uint
+        {
+            None = 0,
+            SuperFast = 1,
+            VeryFast = 2,
+            Fast = 3,
+            Normal = 4,
+            Optimal1 = 5,
+            Optimal2 = 6,
+            Optimal3 = 7
+        }
+
+        public enum OodleFuzzSafe
+        {
+            No = 0,
+            Yes = 1
+        }
+
+        public enum OodleCheckCRC
+        {
+            No = 0,
+            Yes = 1
+        }
+
+        public enum OodleVerbosity
+        {
+            None = 0,
+            Minimal = 1,
+            Some = 2,
+            Lots = 3
+        }
+
+        public enum OodleThreadPhase
+        {
+            ThreadPhase1 = 1,
+            ThreadPhase2 = 2,
+            ThreadPhaseAll = 3,
+            Unthreaded = ThreadPhaseAll
+        }
+
+        public delegate int DecompressFunc(IntPtr srcBuffer, long srcSize, IntPtr dstBuffer, long dstSize, OodleFuzzSafe fuzzSafe = OodleFuzzSafe.Yes, OodleCheckCRC checkCRC = OodleCheckCRC.No, OodleVerbosity verbosity = OodleVerbosity.None, IntPtr decBufBase = new IntPtr(), long decBufSize = 0, IntPtr fpCallback = new IntPtr(), IntPtr callbackUserData = new IntPtr(), IntPtr decoderMemory = new IntPtr(), long decoderMemorySize = 0, OodleThreadPhase threadModule = OodleThreadPhase.Unthreaded);
         public static DecompressFunc Decompress;
 
-        public delegate long CompressFunc(int cmpCode, IntPtr srcBuffer, long srcSize, IntPtr cmpBuffer, long cmpSize, long dict = 0, long dictSize = 0);
-        public delegate long CompressFunc2(int cmpCode, IntPtr srcBuffer, long srcSize, IntPtr cmpBuffer, long cmpSize, long dict = 0, long dictSize = 0, long a8 = 0, long a9 = 0, long a10 = 0);
+        public delegate long CompressFunc(OodleFormat cmpCode, IntPtr srcBuffer, long srcSize, IntPtr cmpBuffer, OodleCompressionLevel cmpLevel, long dict = 0, long dictSize = 0);
+        public delegate long CompressFunc2(OodleFormat cmpCode, IntPtr srcBuffer, long srcSize, IntPtr cmpBuffer, OodleCompressionLevel cmpLevel, IntPtr options = new IntPtr(), IntPtr dictionaryBase = new IntPtr(), IntPtr lrm = new IntPtr(), IntPtr scratch = new IntPtr(), long scratchSize = 0);
         public static CompressFunc Compress;
         public static CompressFunc2 Compress2;
+
+        public delegate IntPtr GetDefaultOptions(OodleFormat cmpCode, OodleCompressionLevel cmpLevel);
+        public static GetDefaultOptions GetOptions;
 
         public delegate long MemorySizeNeededFunc(int a1, long a2);
         public static MemorySizeNeededFunc MemorySizeNeeded;
@@ -490,10 +564,16 @@ namespace FrostySdk
 
             Decompress = Marshal.GetDelegateForFunctionPointer<DecompressFunc>(Kernel32.GetProcAddress(handle, "OodleLZ_Decompress"));
             Compress = Marshal.GetDelegateForFunctionPointer<CompressFunc>(Kernel32.GetProcAddress(handle, "OodleLZ_Compress"));
-            if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa20 || ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedHeat)
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa19, ProfileVersion.Anthem,
+                ProfileVersion.PlantsVsZombiesBattleforNeighborville, ProfileVersion.Fifa20,
+                ProfileVersion.NeedForSpeedHeat, ProfileVersion.Fifa21,
+                ProfileVersion.Madden22, ProfileVersion.Fifa22,
+                ProfileVersion.Battlefield2042, ProfileVersion.Madden23,
+                ProfileVersion.Fifa23, ProfileVersion.NeedForSpeedUnbound))
             {
                 Compress2 = Marshal.GetDelegateForFunctionPointer<CompressFunc2>(Kernel32.GetProcAddress(handle, "OodleLZ_Compress"));
             }
+            GetOptions = Marshal.GetDelegateForFunctionPointer<GetDefaultOptions>(Kernel32.GetProcAddress(handle, "OodleLZ_CompressOptions_GetDefault"));
             MemorySizeNeeded = Marshal.GetDelegateForFunctionPointer<MemorySizeNeededFunc>(Kernel32.GetProcAddress(handle, "OodleLZDecoder_MemorySizeNeeded"));
         }
     }
@@ -582,17 +662,17 @@ namespace FrostySdk
                 return;
 
             Create = Marshal.GetDelegateForFunctionPointer<CreateFunc>(Kernel32.GetProcAddress(handle, "ZSTD_createDCtx"));
-            Free = Marshal.GetDelegateForFunctionPointer<FreeFunc>(Kernel32.GetProcAddress(handle, "ZSTD_freeDCtx"));            
+            Free = Marshal.GetDelegateForFunctionPointer<FreeFunc>(Kernel32.GetProcAddress(handle, "ZSTD_freeDCtx"));
             Decompress = Marshal.GetDelegateForFunctionPointer<DecompressFunc>(Kernel32.GetProcAddress(handle, "ZSTD_decompress"));
             Compress = Marshal.GetDelegateForFunctionPointer<CompressFunc>(Kernel32.GetProcAddress(handle, "ZSTD_compress"));
             CompressBound = Marshal.GetDelegateForFunctionPointer<CompressBoundFunc>(Kernel32.GetProcAddress(handle, "ZSTD_compressBound"));
             IsError = Marshal.GetDelegateForFunctionPointer<IsErrorFunc>(Kernel32.GetProcAddress(handle, "ZSTD_isError"));
 
-            if (ProfilesLibrary.DataVersion != (int)ProfileVersion.Fifa17)
+            if (!ProfilesLibrary.IsLoaded(ProfileVersion.Fifa17))
             {
                 GetErrorCode = Marshal.GetDelegateForFunctionPointer<GetErrorCodeFunc>(Kernel32.GetProcAddress(handle, "ZSTD_getErrorCode"));
                 GetErrorName = Marshal.GetDelegateForFunctionPointer<GetErrorNameFunc>(Kernel32.GetProcAddress(handle, "ZSTD_getErrorName"));
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa18 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa20)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa18, ProfileVersion.Fifa19, ProfileVersion.Fifa20, ProfileVersion.Fifa21, ProfileVersion.Fifa22))
                 {
                     DecompressUsingDict = Marshal.GetDelegateForFunctionPointer<DecompressUsingDictFunc>(Kernel32.GetProcAddress(handle, "ZSTD_decompress_usingDDict"));
                     CreateDigestedDict = Marshal.GetDelegateForFunctionPointer<CreateDigestedDictFunc>(Kernel32.GetProcAddress(handle, "ZSTD_createDDict"));
@@ -674,6 +754,16 @@ namespace FrostySdk
 
     public static class Utils
     {
+        public static string ToHex(this Guid guid)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in guid.ToByteArray())
+            {
+                sb.Append(b.ToString("x2"));
+            }
+            return sb.ToString();
+        }
+
         public static Guid GenerateDeterministicGuid(IEnumerable<object> objects, string type, Guid fileGuid)
         {
             return GenerateDeterministicGuid(objects, TypeLibrary.GetType(type), fileGuid);
@@ -788,30 +878,26 @@ namespace FrostySdk
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                uint first = 0, logicalOffset = 0;
-                uint second = (uint)inData.Length, logicalSize = (uint)inData.Length;
+                uint first = 0;
+                uint second = (uint)inData.Length;
 
-                if (texture.MipCount > 1 && inData.Length > 0x10000)
+                if (texture.MipCount > 1)
                 {
-                    int index = 0;
-                    while (index < texture.FirstMip)
+                    if (inData.Length > 0x10000)
                     {
-                        // the range has a minimum size of 0x10000
-                        // the logical offset and size dont have a minimum size
-                        if (second > 0x10000)
+                        int index = 0;
+                        while (second > 0x10000 && index < texture.FirstMip)
                         {
                             first += texture.MipSizes[index];
-                            second -= texture.MipSizes[index];
+                            second -= texture.MipSizes[index++];
                         }
-                        logicalOffset += texture.MipSizes[index];
-                        logicalSize -= texture.MipSizes[index++];
                     }
                 }
 
                 if (texture.LogicalOffset != first)
                 {
-                    texture.LogicalOffset = logicalOffset;
-                    texture.LogicalSize = logicalSize;
+                    texture.LogicalOffset = first;
+                    texture.LogicalSize = second;
                 }
 
                 byte[] tmpData = null;
@@ -843,7 +929,7 @@ namespace FrostySdk
         {
             get
             {
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa18 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa20)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa18, ProfileVersion.Fifa19, ProfileVersion.Fifa20, ProfileVersion.Fifa21, ProfileVersion.Fifa22))
                     return 0x40000;
                 return 0x10000;
             }
@@ -856,24 +942,31 @@ namespace FrostySdk
             if (compressionOverride == CompressionType.Default)
             {
                 compressionType = CompressionType.LZ4;
-                if (ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedHeat)
+                if (ProfilesLibrary.IsLoaded(ProfileVersion.Anthem, ProfileVersion.PlantsVsZombiesBattleforNeighborville,
+                    ProfileVersion.NeedForSpeedHeat, ProfileVersion.NeedForSpeedUnbound) ||
+                    (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa19) && texture != null))
+                {
                     compressionType = CompressionType.Oodle;
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.MassEffectAndromeda || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa17 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsBattlefrontII || ProfilesLibrary.DataVersion == (int)ProfileVersion.Madden19)
+                }
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.MassEffectAndromeda, ProfileVersion.Fifa17,
+                         ProfileVersion.StarWarsBattlefrontII, ProfileVersion.Madden19,
+                         ProfileVersion.Fifa19, ProfileVersion.Fifa20,
+                         ProfileVersion.Battlefield5, ProfileVersion.StarWarsSquadrons,
+                         ProfileVersion.Fifa21, ProfileVersion.Madden22,
+                         ProfileVersion.Fifa22, ProfileVersion.Madden23, ProfileVersion.DeadSpace))
+                {
                     compressionType = CompressionType.ZStd;
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.DragonAgeInquisition || ProfilesLibrary.DataVersion == (int)ProfileVersion.Battlefield4)
+                }
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.DragonAgeInquisition, ProfileVersion.Battlefield4))
+                {
                     compressionType = CompressionType.ZLib;
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesGardenWarfare2)
+                }
+                else if (ProfilesLibrary.IsLoaded(ProfileVersion.PlantsVsZombiesGardenWarfare2) && texture == null)
                 {
                     compressionType = CompressionType.None;
-                    if (texture != null)
-                        compressionType = CompressionType.LZ4;
                 }
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa20)
-                    compressionType = CompressionType.ZStd;
-                else if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Battlefield5 || ProfilesLibrary.DataVersion == (int)ProfileVersion.StarWarsSquadrons)
-                    compressionType = CompressionType.ZStd;
             }
-            
+
             if (resType == ResourceType.SwfMovie)
             {
                 compressionType = CompressionType.None;
@@ -948,9 +1041,15 @@ namespace FrostySdk
                         if (texture.MipCount > 1)
                         {
                             if (total + offset == texture.MipSizes[0])
+                            {
+                                // offset of second mip in compressed chunk
                                 texture.FirstMipOffset = texture.SecondMipOffset = (uint)compSize;
+                            }
                             else if (total + offset == (texture.MipSizes[0] + texture.MipSizes[1]))
+                            {
+                                // offset of third mip in compressed chunk
                                 texture.SecondMipOffset = (uint)compSize;
+                            }
                         }
                     }
                 }
@@ -1057,21 +1156,33 @@ namespace FrostySdk
 
         private static ulong CompressOodle(byte[] buffer, out byte[] compBuffer, out ushort compressCode, ref bool uncompressed)
         {
-            compBuffer = new byte[0x80000];          
+            compBuffer = new byte[0x80000];
 
             GCHandle ptr1 = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             GCHandle ptr2 = GCHandle.Alloc(compBuffer, GCHandleType.Pinned);
 
             ulong size = 0;
-            if (ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa19 || ProfilesLibrary.DataVersion == (int)ProfileVersion.Fifa20 || ProfilesLibrary.DataVersion == (int)ProfileVersion.NeedForSpeedHeat || ProfilesLibrary.DataVersion == (int)ProfileVersion.PlantsVsZombiesBattleforNeighborville)
+            if (ProfilesLibrary.IsLoaded(ProfileVersion.Anthem, ProfileVersion.Fifa19,
+                ProfileVersion.Fifa20, ProfileVersion.NeedForSpeedHeat,
+                ProfileVersion.PlantsVsZombiesBattleforNeighborville, ProfileVersion.Madden22,
+                ProfileVersion.Madden23))
             {
+                // Kraken
                 compressCode = 0x1170;
-                size = (ulong)Oodle.Compress2(8, ptr1.AddrOfPinnedObject(), buffer.Length, ptr2.AddrOfPinnedObject(), compBuffer.Length);
+                size = (ulong)Oodle.Compress2(Oodle.OodleFormat.Kraken, ptr1.AddrOfPinnedObject(), buffer.Length, ptr2.AddrOfPinnedObject(), Oodle.OodleCompressionLevel.Optimal3, Oodle.GetOptions(Oodle.OodleFormat.Kraken, Oodle.OodleCompressionLevel.Optimal3));
+            }
+            else if (ProfilesLibrary.IsLoaded(ProfileVersion.Fifa21, ProfileVersion.Fifa22,
+                ProfileVersion.NeedForSpeedUnbound))
+            {
+                // Leviathan
+                compressCode = 0x1970;
+                size = (ulong)Oodle.Compress2(Oodle.OodleFormat.Leviathan, ptr1.AddrOfPinnedObject(), buffer.Length, ptr2.AddrOfPinnedObject(), Oodle.OodleCompressionLevel.Optimal3, Oodle.GetOptions(Oodle.OodleFormat.Leviathan, Oodle.OodleCompressionLevel.Optimal3));
             }
             else
             {
+                // Selkie
                 compressCode = 0x1570;
-                size = (ulong)Oodle.Compress(8, ptr1.AddrOfPinnedObject(), buffer.Length, ptr2.AddrOfPinnedObject(), compBuffer.Length);
+                size = (ulong)Oodle.Compress(Oodle.OodleFormat.Selkie, ptr1.AddrOfPinnedObject(), buffer.Length, ptr2.AddrOfPinnedObject(), Oodle.OodleCompressionLevel.Optimal3);
             }
 
             // if its too big

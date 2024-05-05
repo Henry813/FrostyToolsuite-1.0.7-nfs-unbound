@@ -33,14 +33,11 @@ namespace Frosty.Core.Windows
         /// <summary>
         /// The progress of the inner task.
         /// </summary>
-        public double Progress
-        {
-            get
-            {
+        public double Progress {
+            get {
                 return progress;
             }
-            set
-            {
+            set {
                 if (value != progress)
                 {
                     progress = value;
@@ -52,14 +49,11 @@ namespace Frosty.Core.Windows
         /// <summary>
         /// The status of the inner task.
         /// </summary>
-        public string Status
-        {
-            get
-            {
+        public string Status {
+            get {
                 return status;
             }
-            set
-            {
+            set {
                 if (value != status)
                 {
                     status = value;
@@ -85,18 +79,12 @@ namespace Frosty.Core.Windows
             TaskLogger = new FrostyTaskLogger(this);
             Loaded += FrostyTaskWindow_Loaded;
 
-            // ensure the current MainWindow has a TaskbarItemInfo assigned
-            if (Application.Current.MainWindow.TaskbarItemInfo == null)
-            {
-                Application.Current.MainWindow.TaskbarItemInfo = new TaskbarItemInfo();
-            }
             Application.Current.MainWindow.TaskbarItemInfo.ProgressState = TaskbarItemProgressState.Normal;
 
             BindingOperations.SetBinding(Application.Current.MainWindow.TaskbarItemInfo, TaskbarItemInfo.ProgressValueProperty, new Binding("Progress")
             {
-                Converter = new FunctionBasedValueConverter(),
-                ConverterParameter = new Func<object, object>(delegate (object value)
-                {
+                Converter = new DelegateBasedValueConverter(),
+                ConverterParameter = new Func<object, object>(delegate (object value) {
                     return (double)value / 100.0;
                 }),
                 Source = this,

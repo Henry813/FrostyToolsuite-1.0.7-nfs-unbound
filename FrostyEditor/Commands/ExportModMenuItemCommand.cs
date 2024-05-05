@@ -2,8 +2,6 @@
 using Frosty.Core.Windows;
 using FrostyEditor.Windows;
 using System;
-using System.IO;
-using System.Threading;
 using System.Windows.Input;
 
 namespace FrostyEditor.Commands
@@ -33,27 +31,7 @@ namespace FrostyEditor.Commands
                 if (sfd.ShowDialog())
                 {
                     string filename = sfd.FileName;
-
-                    // setup ability to cancel the process
-                    CancellationTokenSource cancelToken = new CancellationTokenSource();
-
-                    FrostyTaskWindow.Show("Saving Mod", "", (task) =>
-                    {
-                        try
-                        {
-                            mainWin.ExportMod(mainWin.Project.GetModSettings(), filename, false, cancelToken.Token);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // process was cancelled
-                            App.Logger.Log("Export Cancelled");
-
-                            if (File.Exists(filename))
-                            {
-                                File.Delete(filename);
-                            }
-                        }
-                    }, showCancelButton: true, cancelCallback: (task) => cancelToken.Cancel());
+                    FrostyTaskWindow.Show("Saving Mod", "", (task) => { mainWin.ExportMod(mainWin.Project.GetModSettings(), filename, false); });
                 }
             }
         }

@@ -14,10 +14,9 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Data;
 using FrostySdk;
-using System.IO;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
-using System.Media;
+using FrostySdk.Managers.Entries;
 
 namespace Frosty.Core.Windows
 {
@@ -42,10 +41,73 @@ namespace Frosty.Core.Windows
     {
     }
 
-    [DisplayName("Editor Options")]
-    public class EditorOptionsData : OptionsExtension
+    public abstract class BaseOptionsData : OptionsExtension
     {
-        [Category("Localization")]
+        [Category("Update Checking")]
+        [DisplayName("Check for Updates")]
+        [Description("Check Github for Frosty updates on startup")]
+        [EbxFieldMeta(EbxFieldType.Boolean)]
+        public bool UpdateCheck { get; set; } = true;
+
+        [Category("Update Checking")]
+        [DisplayName("Check for Prerelease Updates")]
+        [Description("Check Github for Frosty Alpha and Beta updates on startup")]
+        [EbxFieldMeta(EbxFieldType.Boolean)]
+        public bool UpdateCheckPrerelease { get; set; } = false;
+
+        [Category("General")]
+        [DisplayName("Applying Thread Count")]
+        [Description("The thread count that should be used when applying mods. By default is set to the number of processors on the machine")]
+        [EbxFieldMeta(EbxFieldType.Int32)]
+        public int ApplyingThreadCount { get; set; } = Environment.ProcessorCount;
+
+        [Category("General")]
+        [DisplayName("CAS Max File Size")]
+        [Description("Change the maximum size of written cas files when applying mods.\r\n\r\nHigher Values decrease system stability but ensure mod compatibility.")]
+        [EbxFieldMeta(EbxFieldType.Struct)]
+        [Editor(typeof(FrostyLocalizationLanguageDataEditor))]
+        public CustomComboData<string, string> MaxCasFileSize { get; set; }
+
+        [Category("General")]
+        [DisplayName("Disable Launch Process Check")]
+        [Description("Disable the functionality to check if a process is already running when trying to launch")]
+        [EbxFieldMeta(EbxFieldType.Boolean)]
+        public bool DisableLaunchProcessCheck { get; set; } = false;
+        
+        public override void Load()
+        {
+            base.Load();
+            
+            UpdateCheck = Config.Get<bool>("UpdateCheck", true);
+            UpdateCheckPrerelease = Config.Get<bool>("UpdateCheckPrerelease", false);
+
+            ApplyingThreadCount = Config.Get<int>("ApplyingThreadCount", Environment.ProcessorCount);
+
+            List<string> sizes = new List<string>() { "1GB", "512MB", "256MB" };
+            MaxCasFileSize = new CustomComboData<string, string>(sizes, sizes);
+            MaxCasFileSize.SelectedIndex = sizes.IndexOf(Config.Get<string>("MaxCasFileSize", "512MB"));
+
+            DisableLaunchProcessCheck = Config.Get<bool>("DisableLaunchProcessCheck", false);
+        }
+
+        public override void Save()
+        {
+            base.Save();
+            
+            Config.Add("UpdateCheck", UpdateCheck);
+            Config.Add("UpdateCheckPrerelease", UpdateCheckPrerelease);
+            
+            Config.Add("ApplyingThreadCount", ApplyingThreadCount);
+            Config.Add("MaxCasFileSize", MaxCasFileSize.SelectedName);
+
+            Config.Add("DisableLaunchProcessCheck", DisableLaunchProcessCheck);
+        }
+    }
+    
+    [DisplayName("Editor Options")]
+    public class EditorOptionsData : BaseOptionsData
+    {
+        [Category("General")]
         [Description("Selects which localized language files to read from the game files.")]
         [EbxFieldMeta(EbxFieldType.Struct)]
         [Editor(typeof(FrostyLocalizationLanguageDataEditor))]
@@ -92,7 +154,7 @@ namespace Frosty.Core.Windows
         [EbxFieldMeta(EbxFieldType.String)]
         public string ModSettingsAuthor { get; set; } = "";
 
-        [Category("Asset")]
+        [Category("Editor")]
         [DisplayName("Display Module in Class Id")]
         [Description("Determines whether a class's default Id, when viewed in the property grid, is prepended with the module name of that class.\r\n\r\nTrue: Entity.MathEntityData\r\nFalse: MathEntityData")]
         [EbxFieldMeta(EbxFieldType.Boolean)]
@@ -110,42 +172,21 @@ namespace Frosty.Core.Windows
         [EbxFieldMeta(EbxFieldType.Boolean)]
         public bool DefaultInstallation { get; set; } = false;
 
-        [Category("Update Checking")]
-        [DisplayName("Check for Updates")]
-        [Description("Check Github for Frosty updates on startup")]
-        [EbxFieldMeta(EbxFieldType.Boolean)]
-        public bool UpdateCheck { get; set; } = true;
-
-        [Category("Update Checking")]
-        [DisplayName("Check for Prerelease Updates")]
-        [Description("Check Github for Frosty Alpha and Beta updates on startup")]
-        [EbxFieldMeta(EbxFieldType.Boolean)]
-#if FROSTY_ALPHA
-        public bool UpdateCheckPrerelease { get; set; } = true;
-#elif FROSTY_BETA
-        public bool UpdateCheckPrerelease { get; set; } = true;
-#else
-        public bool UpdateCheckPrerelease { get; set; } = false;
-#endif
-
-        [Category("General")]
-        [DisplayName("CAS Max File Size")]
-        [Description("Change the maximum size of written cas files when applying mods.\r\n\r\nHigher Values decrease system stability but ensure mod compatibility.")]
-        [EbxFieldMeta(EbxFieldType.Struct)]
-        [Editor(typeof(FrostyLocalizationLanguageDataEditor))]
-        public CustomComboData<string, string> MaxCasFileSize { get; set; }
-
-        [Category("General")]
-        [DisplayName("Command Line Arguments")]
-        [Description("Command line arguments to run on launch.")]
-        [EbxFieldMeta(EbxFieldType.Boolean)]
-        public string CommandLineArgs { get; set; } = "";
-
         public override void Load()
         {
-            List<string> langs = GetLocalizedLanguages();
-            Language = new CustomComboData<string, string>(langs, langs) {SelectedIndex = langs.IndexOf(Config.Get<string>("Language", "English", ConfigScope.Game))};
+            base.Load();
             
+            if (ProfilesLibrary.HasLoadedProfile)
+            {
+                List<string> langs = GetLocalizedLanguages();
+                Language = new CustomComboData<string, string>(langs, langs) { SelectedIndex = langs.IndexOf(Config.Get<string>("Language", "English", ConfigScope.Game)) };
+            }
+            else
+            {
+                List<string> emptyLangs = new List<string>();
+                Language = new CustomComboData<string, string>(emptyLangs, emptyLangs);
+            }
+
             AutosaveEnabled = Config.Get<bool>("AutosaveEnabled", true);
             AutosavePeriod = Config.Get<int>("AutosavePeriod", 5);
             AutosaveMaxSaves = Config.Get<int>("AutosaveMaxCount", 10);
@@ -159,35 +200,20 @@ namespace Frosty.Core.Windows
             AssetDisplayModuleInId = Config.Get<bool>("DisplayModuleInId", false);
             RememberChoice = Config.Get<bool>("UseDefaultProfile", false);
 
-            UpdateCheck = Config.Get<bool>("UpdateCheck", true);
-            UpdateCheckPrerelease = Config.Get<bool>("UpdateCheckPrerelease", false);
+            //Checks the registry for the current association instead of loading from config
+            string KeyName = "frostyproject";
+            string OpenWith = Assembly.GetEntryAssembly().Location;
 
-            List<string> sizes = new List<string>() { "1GB", "512MB", "256MB" };
-            MaxCasFileSize = new CustomComboData<string, string>(sizes, sizes);
-            MaxCasFileSize.SelectedIndex = sizes.IndexOf(Config.Get<string>("MaxCasFileSize", "1GB"));
-
-            CommandLineArgs = Config.Get<string>("CommandLineArgs", "", ConfigScope.Game);
-
-            DefaultInstallation = CheckFileAssociation();
-
-            //Language = new CustomComboData<string, string>(langs, langs) { SelectedIndex = langs.IndexOf(Config.Get<string>("Init", "Language", "English")) };
-
-            //AutosaveEnabled = Config.Get<bool>("Autosave", "Enabled", true);
-            //AutosavePeriod = Config.Get<int>("Autosave", "Period", 5);
-            //AutosaveMaxSaves = Config.Get<int>("Autosave", "MaxCount", 10);
-
-            //TextEditorTabSize = Config.Get<int>("TextEditor", "TabSize", 4);
-            //TextEditorIndentOnEnter = Config.Get<bool>("TextEditor", "IndentOnEnter", false);
-
-            //DiscordEnabled = Config.Get<bool>("DiscordRPC", "Enabled", false);
-            //ModSettingsAuthor = Config.Get<string>("ModSettings", "Author", "");
-
-            //AssetDisplayModuleInId = Config.Get<bool>("Asset", "DisplayModuleInId", true);
-            //RememberChoice = Config.Get<bool>("Init", "RememberChoice", false);
+            if (Registry.CurrentUser.OpenSubKey("Software\\Classes\\" + KeyName) != null) {
+                string openCommand = (string)Registry.CurrentUser.OpenSubKey("Software\\Classes\\" + KeyName).OpenSubKey("shell").OpenSubKey("open").OpenSubKey("command").GetValue("");
+                if (openCommand.Contains(OpenWith)) DefaultInstallation = true;
+            }
         }
 
         public override void Save()
         {
+            base.Save();
+            
             Config.Add("AutosaveEnabled", AutosaveEnabled);
             Config.Add("AutosavePeriod", AutosavePeriod);
             Config.Add("AutosaveMaxCount", AutosaveMaxSaves);
@@ -200,13 +226,6 @@ namespace Frosty.Core.Windows
             Config.Add("DisplayModuleInId", AssetDisplayModuleInId);
             Config.Add("UseDefaultProfile", RememberChoice);
 
-            Config.Add("UpdateCheck", UpdateCheck);
-            Config.Add("UpdateCheckPrerelease", UpdateCheckPrerelease);
-
-            Config.Add("MaxCasFileSize", MaxCasFileSize.SelectedName);
-
-            Config.Add("CommandLineArgs", CommandLineArgs, ConfigScope.Game);
-
             if (RememberChoice)
                 Config.Add("DefaultProfile", ProfilesLibrary.ProfileName);
             else
@@ -218,81 +237,37 @@ namespace Frosty.Core.Windows
 
             LocalizedStringDatabase.Current.Initialize();
 
-            // Create file association if enabled and doesnt already exist
-            if (DefaultInstallation && !CheckFileAssociation())
-            {
-                CreateFileAssociation();
-            }
+            //Create file association if enabled
+            if (DefaultInstallation) {
+                string Extension = ".fbproject";
+                string KeyName = "frostyproject";
+                string OpenWith = Assembly.GetEntryAssembly().Location;
+                string FileDescription = "Frosty Project";
 
-            //Config.Add("Autosave", "Enabled", AutosaveEnabled);
-            //Config.Add("Autosave", "Period", AutosavePeriod);
-            //Config.Add("Autosave", "MaxCount", AutosaveMaxSaves);
+                RegistryKey BaseKey;
+                RegistryKey OpenMethod;
+                RegistryKey Shell;
+                RegistryKey CurrentUser;
 
-            //Config.Add("TextEditor", "TabSize", TextEditorTabSize);
-            //Config.Add("TextEditor", "IndentOnEnter", TextEditorIndentOnEnter);
-
-            //Config.Add("DiscordRPC", "Enabled", DiscordEnabled);
-            //Config.Add("ModSettings", "Author", ModSettingsAuthor);
-            //Config.Add("Asset", "DisplayModuleInId", AssetDisplayModuleInId);
-            //Config.Add("Init", "RememberChoice", RememberChoice);
-            //Config.Add("Init", "Language", Language.SelectedName);
-        }
-
-        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
-
-        private void CreateFileAssociation()
-        {
-            string Extension = ".fbproject";
-            string KeyName = "frostyproject";
-            string OpenWith = Assembly.GetEntryAssembly().Location;
-            string FileDescription = "Frosty Project";
-            string FileIcon = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Icons", "fbproject.ico");
-
-            try
-            {
-                RegistryKey BaseKey = Registry.CurrentUser.CreateSubKey($"Software\\Classes\\{Extension}");
+                BaseKey = Registry.CurrentUser.CreateSubKey("Software\\Classes\\" + Extension);
                 BaseKey.SetValue("", KeyName);
 
-                RegistryKey OpenMethod = Registry.CurrentUser.CreateSubKey($"Software\\Classes\\{KeyName}");
+                OpenMethod = Registry.CurrentUser.CreateSubKey("Software\\Classes\\" + KeyName);
                 OpenMethod.SetValue("", FileDescription);
-                OpenMethod.CreateSubKey("DefaultIcon").SetValue("", $"\"{FileIcon}\"");
-
-                RegistryKey Shell = OpenMethod.CreateSubKey("shell");
-                Shell.CreateSubKey("edit").CreateSubKey("command").SetValue("", $"\"{OpenWith}\" \"%1\"");
-                Shell.CreateSubKey("open").CreateSubKey("command").SetValue("", $"\"{OpenWith}\" \"%1\"");
+                OpenMethod.CreateSubKey("DefaultIcon").SetValue("", "\"" + OpenWith + "\",0");
+                Shell = OpenMethod.CreateSubKey("shell");
+                Shell.CreateSubKey("edit").CreateSubKey("command").SetValue("", "\"" + OpenWith + "\"" + " \"%1\"");
+                Shell.CreateSubKey("open").CreateSubKey("command").SetValue("", "\"" + OpenWith + "\"" + " \"%1\"");
                 BaseKey.Close();
                 OpenMethod.Close();
                 Shell.Close();
 
-                RegistryKey CurrentUser = Registry.CurrentUser.OpenSubKey($"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\{Extension}", true);
+                CurrentUser = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\" + Extension, true);
                 CurrentUser.DeleteSubKey("UserChoice", false);
                 CurrentUser.Close();
 
                 // Tell explorer the file association has been changed
                 SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
-            }
-            catch (Exception ex)
-            {
-                SystemSounds.Hand.Play();
-                App.Logger.LogError($"Unable to Set File Association: {ex.Message}");
-            }
-        }
-
-        private bool CheckFileAssociation()
-        {
-            // Checks the registry for the current association against current frosty installation
-            string KeyName = "frostyproject";
-            string OpenWith = Assembly.GetEntryAssembly().Location;
-
-            try
-            {
-                string openCommand = Registry.CurrentUser.OpenSubKey("Software\\Classes\\" + KeyName).OpenSubKey("shell").OpenSubKey("open").OpenSubKey("command").GetValue("").ToString();
-                return openCommand.Contains(OpenWith);
-            }
-            catch
-            {
-                return false;
             }
         }
 
@@ -300,6 +275,9 @@ namespace Frosty.Core.Windows
         {
             return true;
         }
+        
+        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
         private List<string> GetLocalizedLanguages()
         {
@@ -334,7 +312,7 @@ namespace Frosty.Core.Windows
     }
 
     [DisplayName("Mod Manager Options")]
-    public class ModManagerOptionsData : OptionsExtension
+    public class ModManagerOptionsData : BaseOptionsData
     {
         [Category("Manager")]
         [DisplayName("Remember Profile Choice")]
@@ -348,94 +326,20 @@ namespace Frosty.Core.Windows
         [EbxFieldMeta(EbxFieldType.Boolean)]
         public string CommandLineArgs { get; set; } = "";
 
-        [Category("Manager")]
-        [DisplayName("Delete Mods with Collection")]
-        [Description("If true, deleting a collection will also delete the mods inside of it.")]
-        [EbxFieldMeta(EbxFieldType.Boolean)]
-        public bool DeleteCollectionMods { get; set; } = true;
-
-        [Category("Manager")]
-        [DisplayName("Custom Mods Directory")]
-        [Description("Select directory to load mods from upon startup.")]
-        [EbxFieldMeta(EbxFieldType.String)]
-        [DependsOn("UseCustomModsDirectory")]
-        public string CustomModsDirectory { get; set; }
-
-        [Category("Update Checking")]
-        [DisplayName("Check for Updates")]
-        [Description("Check Github for Frosty updates on startup")]
-        [EbxFieldMeta(EbxFieldType.Boolean)]
-        public bool UpdateCheck { get; set; } = true;
-
-        [Category("Update Checking")]
-        [DisplayName("Check for Prerelease Updates")]
-        [Description("Check Github for Frosty Alpha and Beta updates on startup")]
-        [EbxFieldMeta(EbxFieldType.Boolean)]
-#if FROSTY_ALPHA
-        public bool UpdateCheckPrerelease { get; set; } = true;
-#elif FROSTY_BETA
-        public bool UpdateCheckPrerelease { get; set; } = true;
-#else
-        public bool UpdateCheckPrerelease { get; set; } = false;
-#endif
-
-        [Category("General")]
-        [DisplayName("CAS Max File Size")]
-        [Description("Change the maximum size of written cas files when applying mods.\r\n\r\nHigher Values decrease system stability but ensure mod compatibility.")]
-        [EbxFieldMeta(EbxFieldType.Struct)]
-        [Editor(typeof(FrostyLocalizationLanguageDataEditor))]
-        public CustomComboData<string, string> MaxCasFileSize { get; set; }
-
-        //[Category("Mod View")]
-        //[DisplayName("Collapse categories by default")]
-        //[Description("Automatically collapse mod categories in the Available Mods list on startup.")]
-        //[EbxFieldMeta(EbxFieldType.Boolean)]
-        //public bool CollapseCategories { get; set; } = false;
-
-        //[Category("Mod View")]
-        //[DisplayName("Applied Mod Icons")]
-        //[Description("Hide the applied mod icons in the Applied Mod list.")]
-        //[EbxFieldMeta(EbxFieldType.Boolean)]
-        //public bool AppliedModIcons { get; set; } = true;
-
         public override void Load()
         {
+            base.Load();
+            
             RememberChoice = Config.Get<bool>("UseDefaultProfile", false);
             CommandLineArgs = Config.Get<string>("CommandLineArgs", "", ConfigScope.Game);
-            DeleteCollectionMods = Config.Get<bool>("DeleteCollectionMods", true);
-
-            CustomModsDirectory = Config.Get<string>("CustomModsDirectory", "");
-
-            UpdateCheck = Config.Get<bool>("UpdateCheck", true);
-
-            UpdateCheckPrerelease = Config.Get<bool>("UpdateCheckPrerelease", false);
-
-            List<string> sizes = new List<string>() { "1GB", "512MB", "256MB" };
-            MaxCasFileSize = new CustomComboData<string, string>(sizes, sizes);
-            MaxCasFileSize.SelectedIndex = sizes.IndexOf(Config.Get<string>("MaxCasFileSize", "1GB"));
-
-            //CollapseCategories = Config.Get("CollapseCategories", false);
-            //AppliedModIcons = Config.Get("AppliedModIcons", true);
         }
 
         public override void Save()
         {
+            base.Save();
+            
             Config.Add("UseDefaultProfile", RememberChoice);
             Config.Add("CommandLineArgs", CommandLineArgs, ConfigScope.Game);
-            Config.Add("DeleteCollectionMods", DeleteCollectionMods);
-
-            if (Directory.Exists(CustomModsDirectory))
-            {
-                Config.Add("CustomModsDirectory", CustomModsDirectory);
-            }
-
-            Config.Add("UpdateCheck", UpdateCheck);
-            Config.Add("UpdateCheckPrerelease", UpdateCheckPrerelease);
-
-            Config.Add("MaxCasFileSize", MaxCasFileSize.SelectedName);
-
-            //Config.Add("CollapseCategories", CollapseCategories);
-            //Config.Add("AppliedModIcons", AppliedModIcons);
 
             if (RememberChoice)
                 Config.Add("DefaultProfile", ProfilesLibrary.ProfileName);
@@ -503,7 +407,6 @@ namespace Frosty.Core.Windows
                     optionData.Save();
 
                 Config.Save();
-                //Config.Save(App.configFilename);
 
                 Close();
             }
